@@ -10,6 +10,8 @@ La plataforma estará orientada a la publicación de eventos musicales y la vent
 
 - Node.js
 - Express
+- MongoDB
+- Mongoose
 - dotenv
 - JavaScript
 - ESM
@@ -54,7 +56,7 @@ src/
 
 ## Arquitectura
 
-Routes → Controllers → Services → Repositories → DAO → Models
+Routes → Controllers → Services → Repositories → Models → MongoDB
 
 ## Autor
 
