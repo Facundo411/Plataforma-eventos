@@ -1,5 +1,6 @@
 import UsersRepository from "../repositories/users.repository.js";
-import { createHash } from "../utils/hash.js";
+import { createHash, compareHash } from "../utils/hash.js";
+import { generateToken } from "../utils/jwt.js";
 
 const usersRepository = new UsersRepository();
 
@@ -28,6 +29,34 @@ class SessionsService {
         delete userResponse.password;
 
         return userResponse;
+    }
+
+    async loginUser(email, password) {
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const user = await usersRepository.findByEmail(normalizedEmail);
+
+        if (!user) {
+            throw new Error("Credenciales inválidas");
+        }
+
+        const isValidPassword = await compareHash(
+            password,
+            user.password
+        );
+
+        if (!isValidPassword) {
+            throw new Error("Credenciales inválidas");
+        }
+
+        const token = generateToken({
+            id: user._id,
+            email: user.email,
+            role: user.role
+        });
+
+        return token;
     }
 }
 

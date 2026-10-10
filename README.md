@@ -1,164 +1,113 @@
-# Plataforma de Eventos e Inscripciones
+# Plataforma de Eventos
 
-API REST desarrollada con Node.js y Express para una plataforma de venta de entradas para eventos musicales.
+## Descripción
 
-## Temática
+Plataforma de Eventos es una API REST desarrollada con Node.js y Express que permite gestionar eventos y usuarios. El proyecto utiliza MongoDB como base de datos e implementa un sistema de autenticación mediante JWT y cookies para administrar las sesiones de los usuarios.
 
-La plataforma está orientada a la publicación de eventos musicales y la gestión de usuarios para recitales, festivales y otros eventos.
+El objetivo es contar con una estructura organizada, separando las rutas, los controladores, los servicios y los repositorios para facilitar el mantenimiento y la escalabilidad de la aplicación.
 
-## Tecnologías
+## Tecnologías utilizadas
 
-- Node.js
-- Express
-- MongoDB
-- Mongoose
-- bcrypt
-- dotenv
-- JavaScript
-- ESM
+- **Node.js:** entorno de ejecución de JavaScript.
+- **Express:** framework para desarrollar el servidor y las rutas.
+- **MongoDB:** base de datos NoSQL.
+- **Mongoose:** herramienta para modelar y gestionar los datos.
+- **JWT (JSON Web Token):** generación y validación de tokens de autenticación.
+- **bcrypt:** encriptación mediante hash de contraseñas.
+- **cookie-parser:** lectura y gestión de cookies.
+- **dotenv:** administración de variables de entorno.
 
-## Instalación
+## Instalación y configuración
+
+### 1. Instalar dependencias
+
+Clonar el repositorio y ejecutar el siguiente comando dentro de la carpeta del proyecto:
 
 ```bash
-git clone URL_DE_TU_REPOSITORIO
-cd Plataforma-eventos
 npm install
 ```
 
-Crear `.env` a partir de `.env.example`:
+### 2. Configurar las variables de entorno
+
+Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
 PORT=8080
-NODE_ENV=development
 MONGO_URL=tu_mongo_url
 JWT_SECRET=tu_jwt_secret
+JWT_EXPIRES_IN=1h
+NODE_ENV=development
 ```
 
-## Ejecución
+Reemplazar los valores de ejemplo por la configuración correspondiente. El archivo `.env` contiene información sensible y no debe subirse al repositorio.
 
-Para iniciar el servidor:
-
-```bash
-npm start
-```
-
-Para desarrollo:
+### 3. Iniciar el servidor
 
 ```bash
 npm run dev
 ```
 
-## Endpoints
+El servidor se ejecutará en el puerto configurado. Se puede verificar su funcionamiento mediante el endpoint `/api/health`.
 
-- `GET /api/health` — Estado del servidor.
-- `GET /api/events` — Lista de eventos.
-- `GET /api/sessions` — Estado inicial de sessions.
-- `POST /api/sessions/register` — Registro de usuarios.
+## Funcionalidades principales
 
-## Registro de usuarios
+- **Registro de usuarios:** permite crear cuentas con validación de datos y contraseñas protegidas mediante bcrypt.
+- **Inicio de sesión:** verifica el correo electrónico y la contraseña del usuario.
+- **Autenticación con JWT:** genera tokens para identificar a los usuarios autenticados.
+- **Gestión de cookies:** almacena el token en una cookie `httpOnly`.
+- **Usuario actual:** permite consultar los datos básicos del usuario que inició sesión.
+- **Cierre de sesión:** elimina la cookie de autenticación.
+- **Consulta de eventos:** permite obtener los eventos disponibles a través de la API.
 
-### POST `/api/sessions/register`
+## Endpoints principales
 
-Permite registrar un nuevo usuario en la plataforma.
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/health` | Verifica el estado del servidor. |
+| GET | `/api/events` | Obtiene la lista de eventos. |
+| POST | `/api/sessions/register` | Registra un usuario nuevo. |
+| POST | `/api/sessions/login` | Inicia sesión y genera la cookie de autenticación. |
+| GET | `/api/sessions/current` | Obtiene los datos del usuario autenticado. |
+| POST | `/api/sessions/logout` | Cierra la sesión del usuario. |
 
-### Body
+### Ejemplo de inicio de sesión
 
-```json
-{
-    "first_name": "Ana",
-    "last_name": "Pérez",
-    "email": "Ana@Mail.com ",
-    "password": "Secreta123"
-}
-```
-
-Campos obligatorios:
-
-- `first_name`
-- `last_name`
-- `email`
-- `password`
-
-El email se normaliza automáticamente eliminando espacios y convirtiéndolo a minúsculas.
-
-La contraseña debe tener al menos 8 caracteres.
-
-El campo `role` no se recibe desde el registro público. Los usuarios registrados reciben el rol `user` por defecto.
-
-### Respuesta exitosa
+**Solicitud:** `POST /api/sessions/login`
 
 ```json
 {
-    "status": "success",
-    "payload": {
-        "first_name": "Ana",
-        "last_name": "Pérez",
-        "email": "ana@mail.com",
-        "role": "user"
-    }
+  "email": "usuario@email.com",
+  "password": "tu_contraseña"
 }
 ```
 
-La contraseña nunca se devuelve en la respuesta y se almacena utilizando bcrypt.
+Si las credenciales son correctas, la API responde con un mensaje de éxito y establece la cookie de autenticación.
 
-### Respuestas de error
+## Estructura del proyecto
 
-- `400` — Campos faltantes, email inválido o contraseña demasiado corta.
-- `409` — El email ya está registrado.
+El proyecto está organizado en diferentes carpetas para separar las responsabilidades:
 
-## Arquitectura
+- **config:** configuración de la aplicación y conexión a la base de datos.
+- **routes:** definición de los endpoints.
+- **controllers:** manejo de las solicitudes y respuestas HTTP.
+- **services:** lógica de negocio.
+- **repositories:** acceso a los datos.
+- **models:** esquemas de MongoDB.
+- **middlewares:** autenticación y validaciones intermedias.
+- **utils:** funciones auxiliares, como la generación de JWT y el hash de contraseñas.
 
-El proyecto utiliza una arquitectura en capas:
-
-Routes → Controllers → Services → Repositories → DAO → Models → MongoDB
-
-El hash de contraseñas se encuentra implementado en un helper reutilizable:
-
-`src/utils/hash.js`
-
-## Estructura
-
-```text
-src/
-├── app.js
-├── server.js
-├── config/
-│   └── db.js
-├── routes/
-│   ├── events.router.js
-│   └── sessions.router.js
-├── controllers/
-│   ├── events.controller.js
-│   └── sessions.controller.js
-├── services/
-│   ├── events.service.js
-│   └── sessions.service.js
-├── repositories/
-│   ├── events.repository.js
-│   ├── sessions.repository.js
-│   └── users.repository.js
-├── dao/
-│   ├── .gitkeep
-│   └── users.dao.js
-├── models/
-│   ├── User.js
-│   ├── Event.js
-│   └── Inscription.js
-├── middlewares/
-│   └── .gitkeep
-└── utils/
-    ├── .gitkeep
-    └── hash.js
-```
+Esta organización permite mantener el código más ordenado y facilita futuras modificaciones.
 
 ## Seguridad
 
-- Las contraseñas nunca se almacenan en texto plano.
-- Las contraseñas se protegen mediante bcrypt.
-- La contraseña no se incluye en las respuestas del endpoint.
-- El rol no puede ser definido por el usuario durante el registro público.
-- El archivo `.env` no se incluye en el repositorio.
+La API incorpora diferentes medidas de seguridad:
+
+- Las contraseñas se almacenan mediante hash con bcrypt.
+- Los tokens JWT tienen un tiempo de expiración configurable.
+- Las cookies `httpOnly` impiden el acceso directo a su contenido desde JavaScript del navegador.
+- Las rutas protegidas verifican la autenticidad del token.
+- Las variables sensibles se guardan en un archivo `.env`.
 
 ## Autor
 
-Facundo Veliz
+**Facundo Veliz**

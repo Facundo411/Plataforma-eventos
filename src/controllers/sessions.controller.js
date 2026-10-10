@@ -53,3 +53,70 @@ export async function register(req, res) {
         });
     }
 }
+
+export async function login(req, res) {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                status: "error",
+                message: "Email y password son obligatorios"
+            });
+        }
+
+        const token = await sessionsService.loginUser(
+            email,
+            password
+        );
+
+        res.cookie("currentUser", token, {
+            httpOnly: true,
+            sameSite: "lax",
+            maxAge: 3600000,
+            secure: process.env.NODE_ENV === "production"
+        });
+
+        res.status(200).json({
+            status: "success",
+            message: "Login correcto"
+        });
+
+    } catch (error) {
+        if (error.message === "Credenciales inválidas") {
+            return res.status(401).json({
+                status: "error",
+                message: "Credenciales inválidas"
+            });
+        }
+
+        res.status(500).json({
+            status: "error",
+            message: "Error al iniciar sesión"
+        });
+    }
+}
+
+export async function current(req, res) {
+    res.status(200).json({
+        status: "success",
+        payload: {
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
+        }
+    });
+}
+
+export function logout(req, res) {
+    res.clearCookie("currentUser", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production"
+    });
+
+    return res.status(200).json({
+        status: "success",
+        message: "Sesión cerrada"
+    });
+}
