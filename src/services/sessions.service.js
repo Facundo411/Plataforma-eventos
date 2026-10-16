@@ -1,6 +1,5 @@
 import UsersRepository from "../repositories/users.repository.js";
 import { createHash, compareHash } from "../utils/hash.js";
-import { generateToken } from "../utils/jwt.js";
 
 const usersRepository = new UsersRepository();
 
@@ -31,8 +30,8 @@ class SessionsService {
         return userResponse;
     }
 
-    async loginUser(email, password) {
 
+    async authenticateUser(email, password) {
         const normalizedEmail = email.trim().toLowerCase();
 
         const user = await usersRepository.findByEmail(normalizedEmail);
@@ -50,14 +49,9 @@ class SessionsService {
             throw new Error("Credenciales inválidas");
         }
 
-        const token = generateToken({
-            id: user._id,
-            email: user.email,
-            role: user.role
-        });
-
-        return token;
+        return user;
     }
+
 }
 
 export default SessionsService;
