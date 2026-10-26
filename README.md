@@ -2,36 +2,36 @@
 
 ## Descripción
 
-Plataforma de Eventos es una API REST desarrollada con Node.js y Express que permite gestionar eventos y usuarios. El proyecto utiliza MongoDB como base de datos e implementa un sistema de autenticación mediante JWT y cookies para administrar las sesiones de los usuarios.
+Plataforma de Eventos es una API REST desarrollada con Node.js y Express que permite gestionar usuarios y eventos. Utiliza MongoDB como base de datos e implementa autenticación mediante Passport.js, JWT y cookies, junto con autorización basada en roles (RBAC).
 
-El objetivo es contar con una estructura organizada, separando las rutas, los controladores, los servicios y los repositorios para facilitar el mantenimiento y la escalabilidad de la aplicación.
+El proyecto separa rutas, controladores, servicios, repositorios y middlewares para facilitar el mantenimiento y la escalabilidad.
 
 ## Tecnologías utilizadas
 
 - **Node.js:** entorno de ejecución de JavaScript.
 - **Express:** framework para desarrollar el servidor y las rutas.
 - **MongoDB:** base de datos NoSQL.
-- **Mongoose:** herramienta para modelar y gestionar los datos.
-- **JWT (JSON Web Token):** generación y validación de tokens de autenticación.
-- **bcrypt:** permite generar hashes de contraseñas para almacenarlas de forma segura.
-- **cookie-parser:** lectura y gestión de cookies.
-- **dotenv:** administración de variables de entorno.
-- **Passport.js:** middleware de autenticación para gestionar las estrategias de registro, inicio de sesión y usuario actual.
-- **passport-custom:** permite implementar estrategias de autenticación personalizadas para validar usuarios y tokens JWT.
+- **Mongoose:** modelado y gestión de datos.
+- **JWT (JSON Web Token):** generación y validación de tokens.
+- **bcrypt:** hash y verificación de contraseñas.
+- **cookie-parser:** lectura de cookies.
+- **dotenv:** configuración mediante variables de entorno.
+- **Passport.js:** autenticación de usuarios.
+- **passport-custom:** estrategias personalizadas de registro, login y usuario actual.
 
 ## Instalación y configuración
 
 ### 1. Instalar dependencias
 
-Clonar el repositorio y ejecutar el siguiente comando dentro de la carpeta del proyecto:
+Clonar el repositorio y ejecutar:
 
 ```bash
 npm install
 ```
 
-### 2. Configurar las variables de entorno
+### 2. Configurar variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
+Crear un archivo `.env` en la raíz del proyecto:
 
 ```env
 PORT=8080
@@ -41,7 +41,7 @@ JWT_EXPIRES_IN=1h
 NODE_ENV=development
 ```
 
-Reemplazar los valores de ejemplo por la configuración correspondiente. El archivo `.env` contiene información sensible y no debe subirse al repositorio.
+Reemplazar los valores de ejemplo por los correspondientes a tu entorno. No subir el archivo `.env` al repositorio.
 
 ### 3. Iniciar el servidor
 
@@ -49,93 +49,119 @@ Reemplazar los valores de ejemplo por la configuración correspondiente. El arch
 npm run dev
 ```
 
-El servidor se ejecutará en el puerto configurado. Se puede verificar su funcionamiento mediante el endpoint `/api/health`.
+El endpoint `/api/health` permite comprobar que el servidor está activo.
 
-## Funcionalidades principales
+## Autenticación
 
-- **Registro de usuarios:** utiliza la estrategia `register` de Passport.js para validar los datos, comprobar si el email ya está registrado y crear el usuario con la contraseña protegida mediante bcrypt.
-- **Inicio de sesión:** utiliza la estrategia `login` de Passport.js para validar las credenciales y generar un token JWT almacenado en una cookie `httpOnly`.
-- **Autenticación con JWT:** genera tokens para identificar a los usuarios autenticados.
-- **Gestión de cookies:** almacena el token en una cookie `httpOnly`.
-- **Usuario actual:** utiliza la estrategia `current` de Passport.js para validar el token JWT y consultar los datos básicos del usuario autenticado.
-- **Cierre de sesión:** elimina la cookie de autenticación.
-- **Consulta de eventos:** permite obtener los eventos disponibles a través de la API.
+La autenticación utiliza JWT almacenados en una cookie llamada `currentUser`, configurada como `httpOnly`.
+
+- **Registro:** valida los datos, verifica que el email no esté registrado y crea un usuario con contraseña protegida mediante bcrypt.
+- **Login:** valida las credenciales y genera un JWT.
+- **Usuario actual:** valida el token y devuelve los datos básicos del usuario autenticado.
+- **Logout:** elimina la cookie de autenticación.
+
+El registro público no permite elegir el rol mediante el body. Los usuarios nuevos reciben el rol `user` por defecto.
+
+## Roles y autorización (RBAC)
+
+El sistema utiliza tres roles:
+
+- **user:** puede consultar eventos publicados.
+- **organizer:** puede consultar eventos publicados, crear eventos y modificar o publicar sus propios eventos.
+- **admin:** puede consultar eventos publicados, crear eventos, modificar y publicar cualquier evento y consultar todos los usuarios.
+
+### Matriz de permisos
+
+| Acción | user | organizer | admin |
+|---|:---:|:---:|:---:|
+| Consultar eventos publicados | Sí | Sí | Sí |
+| Crear eventos | No | Sí | Sí |
+| Modificar eventos propios | No | Sí | Sí |
+| Modificar cualquier evento | No | No | Sí |
+| Publicar eventos propios | No | Sí | Sí |
+| Publicar cualquier evento | No | No | Sí |
+| Consultar todos los usuarios | No | No | Sí |
+
+El campo `role` del modelo `User` admite los valores `user`, `organizer` y `admin`, y tiene como valor predeterminado `user`.
+
+## Middlewares de autenticación y autorización
+
+La autorización está separada de las rutas mediante dos middlewares reutilizables:
+
+- `auth.middleware.js`: lee el JWT desde la cookie `currentUser`, verifica su validez y carga la información del usuario en `req.user`.
+- `authorize.middleware.js`: recibe los roles permitidos como parámetros y compara esos roles con `req.user.role`.
+
+Las rutas protegidas ejecutan primero la autenticación y luego la autorización. Por ejemplo:
+
+```js
+authenticate,
+authorize("organizer", "admin")
+```
+
+### Diferencia entre 401 y 403
+
+- **401 Unauthorized:** no existe una sesión válida; por ejemplo, falta la cookie o el JWT es inválido o expiró.
+- **403 Forbidden:** existe una sesión válida, pero el rol no tiene permiso para realizar la acción.
+
+Otros códigos relevantes:
+
+- **400 Bad Request:** datos inválidos o identificador de evento con formato incorrecto.
+- **404 Not Found:** el evento solicitado no existe.
+- **409 Conflict:** el email ya está registrado.
+- **500 Internal Server Error:** error interno inesperado del servidor.
 
 ## Endpoints principales
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/health` | Verifica el estado del servidor. |
-| GET | `/api/events` | Obtiene la lista de eventos. |
-| POST | `/api/sessions/register` | Registra un usuario nuevo. |
-| POST | `/api/sessions/login` | Inicia sesión y genera la cookie de autenticación. |
-| GET | `/api/sessions/current` | Obtiene los datos del usuario autenticado. |
-| POST | `/api/sessions/logout` | Cierra la sesión del usuario. |
+| Método | Ruta | Descripción | Acceso |
+|---|---|---|---|
+| GET | `/api/health` | Verifica el estado del servidor | Público |
+| GET | `/api/events` | Consulta eventos publicados | Público; devuelve solo eventos publicados |
+| POST | `/api/events` | Crea un evento | `organizer`, `admin` |
+| PATCH | `/api/events/:id` | Modifica un evento | `organizer` propietario o `admin` |
+| PATCH | `/api/events/:id/publish` | Publica un evento | `organizer` propietario o `admin` |
+| POST | `/api/sessions/register` | Registra un usuario | Público |
+| POST | `/api/sessions/login` | Inicia sesión | Público |
+| GET | `/api/sessions/current` | Consulta el usuario autenticado | Autenticado |
+| POST | `/api/sessions/logout` | Cierra la sesión | Cierre de cookie |
+| GET | `/api/users` | Consulta todos los usuarios sin incluir contraseñas | `admin` |
 
-### Respuestas de error de autenticación
+## Propiedad de los eventos
 
-- **400 Bad Request:** datos de registro inválidos o campos obligatorios faltantes.
-- **401 Unauthorized:** credenciales incorrectas o usuario no autenticado.
-- **409 Conflict:** el email ingresado ya está registrado.
-- **500 Internal Server Error:** error interno durante el registro o el inicio de sesión.
+Cada evento guarda una referencia al usuario que lo creó mediante el campo `organizer`.
 
-### Ejemplo de inicio de sesión
+Al modificar o publicar un evento, la API verifica que:
 
-**Solicitud:** `POST /api/sessions/login`
+- El usuario autenticado sea el propietario del evento; o
+- El usuario tenga el rol `admin`, que permite operar sobre cualquier evento.
 
-```json
-{
-  "email": "usuario@email.com",
-  "password": "tu_contraseña"
-}
-```
+El identificador del organizador se obtiene de `req.user`, no del body enviado por el cliente.
 
-Si las credenciales son correctas, la API responde con un mensaje de éxito y establece la cookie de autenticación.
+Los eventos nuevos tienen `published: false` por defecto. El listado de eventos devuelve únicamente los que están publicados.
 
 ## Estructura del proyecto
 
-El proyecto está organizado en diferentes carpetas para separar las responsabilidades:
-
-- **config:** configuración de la aplicación, conexión a la base de datos (`db.js`) y estrategias de autenticación de Passport.js (`passport.config.js`).
-- **routes:** definición de los endpoints.
-- **controllers:** manejo de las solicitudes y respuestas HTTP.
-- **services:** lógica de negocio.
-- **repositories:** acceso a los datos.
-- **models:** esquemas de MongoDB.
-- **middlewares:** funciones intermedias de Express para procesar solicitudes y aplicar validaciones cuando sea necesario.
-- **utils:** funciones auxiliares, como la generación de JWT y el hash de contraseñas.
-- **dao:** acceso a datos mediante objetos de acceso a datos (DAO).
-- **app.js:** configuración de Express, middlewares generales y rutas.
-- **server.js:** inicio del servidor y conexión con la base de datos.
-
-Esta organización permite mantener el código más ordenado y facilita futuras modificaciones.
-
-## Estrategias de Passport.js
-
-La autenticación se implementa mediante Passport.js y el paquete `passport-custom`, utilizando tres estrategias:
-
-- **register:** valida los datos recibidos, comprueba que el email no esté registrado y crea el usuario con la contraseña protegida mediante bcrypt.
-- **login:** verifica las credenciales del usuario y permite generar un token JWT cuando son correctas. El token se almacena en una cookie `httpOnly`.
-- **current:** obtiene el token de la cookie `currentUser`, verifica su validez y devuelve los datos básicos del usuario autenticado.
-
-Las estrategias se ejecutan sin sesiones de Passport (`session: false`), ya que la autenticación se gestiona mediante JWT y cookies.
-
-Si el token falta o no es válido, la estrategia `current` rechaza la autenticación.
-
-### Extensibilidad
-
-La autenticación está centralizada en `src/config/passport.config.js`, lo que permite incorporar futuras estrategias de autenticación con proveedores externos, como Google o GitHub, sin modificar `app.js`. Para ello, será necesario configurar las estrategias correspondientes y sus credenciales.
+- `src/config/`: configuración de la aplicación, base de datos y Passport.js.
+- `src/controllers/`: manejo de solicitudes y respuestas HTTP.
+- `src/dao/`: acceso a datos.
+- `src/middlewares/`: autenticación y autorización.
+- `src/models/`: esquemas de MongoDB.
+- `src/repositories/`: operaciones de acceso a datos.
+- `src/routes/`: definición de endpoints.
+- `src/services/`: lógica de negocio.
+- `src/utils/`: utilidades, como JWT y hash de contraseñas.
+- `src/app.js`: configuración de Express y registro de rutas.
+- `src/server.js`: inicio del servidor.
 
 ## Seguridad
 
-La API incorpora diferentes medidas de seguridad:
-
 - Las contraseñas se almacenan mediante hash con bcrypt.
-- Los tokens JWT tienen un tiempo de expiración configurable.
-- Las cookies `httpOnly` impiden el acceso directo a su contenido desde JavaScript del navegador.
-- Las rutas protegidas verifican la autenticidad del token.
-- Las variables sensibles se guardan en un archivo `.env`.
+- Los JWT tienen un tiempo de expiración configurable.
+- La cookie de autenticación usa `httpOnly`.
+- Los permisos se verifican en el backend mediante middlewares.
+- Las rutas de modificación y publicación verifican la propiedad del evento.
+- La consulta administrativa excluye las contraseñas.
+- Las variables sensibles se almacenan en `.env`, que no debe subirse al repositorio.
 
 ## Autor
 
-**Facundo Veliz**
+Facundo Veliz
