@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getEvents, createEvent, updateEvent, publishEvent } from "../controllers/events.controller.js";
+import { getEvents, getEventById, createEvent, updateEvent, changeEventStatus } from "../controllers/events.controller.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
 
@@ -8,11 +8,13 @@ const router = Router();
 
 router.get("/", getEvents);
 
+router.get("/:id", getEventById);
+
 router.post("/", authenticate, authorize("organizer", "admin"), createEvent);
 
-router.patch("/:id", authenticate, authorize("organizer", "admin"), updateEvent);
+router.put("/:id", authenticate, authorize("organizer", "admin"), updateEvent);
 
-router.patch("/:id/publish", authenticate, authorize("organizer", "admin"), publishEvent);
+router.patch("/:id/status", authenticate, authorize("organizer", "admin"), changeEventStatus);
 
 
 export default router;

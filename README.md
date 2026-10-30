@@ -2,28 +2,25 @@
 
 ## Descripción
 
-Plataforma de Eventos es una API REST desarrollada con Node.js y Express que permite gestionar usuarios y eventos. Utiliza MongoDB como base de datos e implementa autenticación mediante Passport.js, JWT y cookies, junto con autorización basada en roles (RBAC).
+Plataforma de Eventos es una API REST desarrollada con **Node.js y Express** para gestionar usuarios y eventos.
 
-El proyecto separa rutas, controladores, servicios, repositorios y middlewares para facilitar el mantenimiento y la escalabilidad.
+Utiliza MongoDB, autenticación mediante Passport.js, JWT y cookies, y autorización basada en roles (RBAC).
+
+El proyecto está organizado en rutas, controladores, servicios, repositorios y middlewares.
 
 ## Tecnologías utilizadas
 
-- **Node.js:** entorno de ejecución de JavaScript.
-- **Express:** framework para desarrollar el servidor y las rutas.
-- **MongoDB:** base de datos NoSQL.
-- **Mongoose:** modelado y gestión de datos.
-- **JWT (JSON Web Token):** generación y validación de tokens.
-- **bcrypt:** hash y verificación de contraseñas.
-- **cookie-parser:** lectura de cookies.
-- **dotenv:** configuración mediante variables de entorno.
-- **Passport.js:** autenticación de usuarios.
-- **passport-custom:** estrategias personalizadas de registro, login y usuario actual.
+- **Node.js y Express:** servidor y API REST.
+- **MongoDB y Mongoose:** base de datos y modelos.
+- **Passport.js y passport-custom:** autenticación.
+- **JWT:** generación y validación de tokens.
+- **bcrypt:** protección de contraseñas.
+- **cookie-parser:** manejo de cookies.
+- **dotenv:** variables de entorno.
 
-## Instalación y configuración
+## Instalación
 
 ### 1. Instalar dependencias
-
-Clonar el repositorio y ejecutar:
 
 ```bash
 npm install
@@ -31,7 +28,7 @@ npm install
 
 ### 2. Configurar variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto:
+Crear un archivo `.env`:
 
 ```env
 PORT=8080
@@ -41,126 +38,139 @@ JWT_EXPIRES_IN=1h
 NODE_ENV=development
 ```
 
-Reemplazar los valores de ejemplo por los correspondientes a tu entorno. No subir el archivo `.env` al repositorio.
-
 ### 3. Iniciar el servidor
 
 ```bash
 npm run dev
 ```
 
-El endpoint `/api/health` permite comprobar que el servidor está activo.
+El endpoint `/api/health` permite verificar el funcionamiento del servidor.
 
-## Autenticación
+**Importante:** no subir `.env` ni `node_modules` a GitHub.
 
-La autenticación utiliza JWT almacenados en una cookie llamada `currentUser`, configurada como `httpOnly`.
+## Autenticación y roles
 
-- **Registro:** valida los datos, verifica que el email no esté registrado y crea un usuario con contraseña protegida mediante bcrypt.
-- **Login:** valida las credenciales y genera un JWT.
-- **Usuario actual:** valida el token y devuelve los datos básicos del usuario autenticado.
-- **Logout:** elimina la cookie de autenticación.
+La autenticación utiliza JWT almacenados en una cookie `currentUser` con `httpOnly`.
 
-El registro público no permite elegir el rol mediante el body. Los usuarios nuevos reciben el rol `user` por defecto.
+El sistema permite registrar usuarios, iniciar sesión, consultar el usuario actual y cerrar sesión.
 
-## Roles y autorización (RBAC)
+Existen tres roles:
 
-El sistema utiliza tres roles:
+- **user:** puede consultar eventos.
+- **organizer:** puede crear y modificar sus propios eventos.
+- **admin:** puede administrar eventos de cualquier organizador y consultar usuarios.
 
-- **user:** puede consultar eventos publicados.
-- **organizer:** puede consultar eventos publicados, crear eventos y modificar o publicar sus propios eventos.
-- **admin:** puede consultar eventos publicados, crear eventos, modificar y publicar cualquier evento y consultar todos los usuarios.
+Los usuarios registrados públicamente reciben el rol `user` por defecto.
 
-### Matriz de permisos
+## Gestión de eventos
 
-| Acción | user | organizer | admin |
-|---|:---:|:---:|:---:|
-| Consultar eventos publicados | Sí | Sí | Sí |
-| Crear eventos | No | Sí | Sí |
-| Modificar eventos propios | No | Sí | Sí |
-| Modificar cualquier evento | No | No | Sí |
-| Publicar eventos propios | No | Sí | Sí |
-| Publicar cualquier evento | No | No | Sí |
-| Consultar todos los usuarios | No | No | Sí |
+Cada evento contiene:
 
-El campo `role` del modelo `User` admite los valores `user`, `organizer` y `admin`, y tiene como valor predeterminado `user`.
+- `title`: título.
+- `description`: descripción.
+- `category`: categoría.
+- `date`: fecha.
+- `location`: ubicación.
+- `capacity`: capacidad.
+- `price`: precio.
+- `status`: estado.
+- `organizer`: usuario creador.
 
-## Middlewares de autenticación y autorización
+### Estados disponibles
 
-La autorización está separada de las rutas mediante dos middlewares reutilizables:
+- `draft`: borrador (estado inicial).
+- `published`: publicado.
+- `cancelled`: cancelado.
+- `finished`: finalizado.
 
-- `auth.middleware.js`: lee el JWT desde la cookie `currentUser`, verifica su validez y carga la información del usuario en `req.user`.
-- `authorize.middleware.js`: recibe los roles permitidos como parámetros y compara esos roles con `req.user.role`.
+### Validaciones
 
-Las rutas protegidas ejecutan primero la autenticación y luego la autorización. Por ejemplo:
+- No se permiten eventos con fechas pasadas.
+- La capacidad debe ser mayor a cero.
+- El precio no puede ser negativo.
+- No se pueden publicar eventos cuya fecha ya pasó.
+- No se pueden modificar eventos cancelados.
+- Los eventos cancelados permanecen en la base de datos.
 
-```js
-authenticate,
-authorize("organizer", "admin")
-```
+## Endpoints
 
-### Diferencia entre 401 y 403
-
-- **401 Unauthorized:** no existe una sesión válida; por ejemplo, falta la cookie o el JWT es inválido o expiró.
-- **403 Forbidden:** existe una sesión válida, pero el rol no tiene permiso para realizar la acción.
-
-Otros códigos relevantes:
-
-- **400 Bad Request:** datos inválidos o identificador de evento con formato incorrecto.
-- **404 Not Found:** el evento solicitado no existe.
-- **409 Conflict:** el email ya está registrado.
-- **500 Internal Server Error:** error interno inesperado del servidor.
-
-## Endpoints principales
+### Eventos
 
 | Método | Ruta | Descripción | Acceso |
 |---|---|---|---|
-| GET | `/api/health` | Verifica el estado del servidor | Público |
-| GET | `/api/events` | Consulta eventos publicados | Público; devuelve solo eventos publicados |
-| POST | `/api/events` | Crea un evento | `organizer`, `admin` |
-| PATCH | `/api/events/:id` | Modifica un evento | `organizer` propietario o `admin` |
-| PATCH | `/api/events/:id/publish` | Publica un evento | `organizer` propietario o `admin` |
-| POST | `/api/sessions/register` | Registra un usuario | Público |
-| POST | `/api/sessions/login` | Inicia sesión | Público |
-| GET | `/api/sessions/current` | Consulta el usuario autenticado | Autenticado |
-| POST | `/api/sessions/logout` | Cierra la sesión | Cierre de cookie |
-| GET | `/api/users` | Consulta todos los usuarios sin incluir contraseñas | `admin` |
+| GET | `/api/events` | Listar eventos | Público |
+| GET | `/api/events/:id` | Obtener evento | Público |
+| POST | `/api/events` | Crear evento | organizer, admin |
+| PUT | `/api/events/:id` | Modificar evento | organizer propietario, admin |
+| PATCH | `/api/events/:id/status` | Cambiar estado | organizer propietario, admin |
 
-## Propiedad de los eventos
+### Sesiones y usuarios
 
-Cada evento guarda una referencia al usuario que lo creó mediante el campo `organizer`.
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/api/sessions/register` | Registro |
+| POST | `/api/sessions/login` | Login |
+| GET | `/api/sessions/current` | Usuario actual |
+| POST | `/api/sessions/logout` | Logout |
+| GET | `/api/users` | Listar usuarios (admin) |
 
-Al modificar o publicar un evento, la API verifica que:
+## Filtros y paginación
 
-- El usuario autenticado sea el propietario del evento; o
-- El usuario tenga el rol `admin`, que permite operar sobre cualquier evento.
+El endpoint `GET /api/events` admite:
 
-El identificador del organizador se obtiene de `req.user`, no del body enviado por el cliente.
+- `status`, `category`, `location`: filtros.
+- `dateFrom`, `dateTo`: rango de fechas.
+- `page`, `limit`: paginación.
+- `sort`: ordenamiento.
 
-Los eventos nuevos tienen `published: false` por defecto. El listado de eventos devuelve únicamente los que están publicados.
+Ejemplo:
+
+```http
+GET /api/events?category=workshop&page=1&limit=10&sort=date
+```
+
+La respuesta incluye `data`, `page`, `limit`, `total` y `totalPages`.
+
+## Autorización
+
+El organizador de cada evento se asigna automáticamente desde `req.user`.
+
+Los middlewares `authenticate` y `authorize` verifican la identidad y los permisos del usuario.
+
+Los organizadores solamente pueden modificar sus propios eventos. Los administradores pueden modificar cualquier evento, respetando las reglas de negocio.
+
+### Códigos HTTP
+
+- **200:** operación exitosa.
+- **201:** recurso creado.
+- **400:** datos inválidos.
+- **401:** usuario no autenticado.
+- **403:** permisos insuficientes.
+- **404:** recurso no encontrado.
+- **409:** conflicto de datos.
+- **500:** error del servidor.
 
 ## Estructura del proyecto
 
-- `src/config/`: configuración de la aplicación, base de datos y Passport.js.
-- `src/controllers/`: manejo de solicitudes y respuestas HTTP.
-- `src/dao/`: acceso a datos.
-- `src/middlewares/`: autenticación y autorización.
-- `src/models/`: esquemas de MongoDB.
-- `src/repositories/`: operaciones de acceso a datos.
-- `src/routes/`: definición de endpoints.
-- `src/services/`: lógica de negocio.
-- `src/utils/`: utilidades, como JWT y hash de contraseñas.
-- `src/app.js`: configuración de Express y registro de rutas.
-- `src/server.js`: inicio del servidor.
+- `config/`: configuración y conexión.
+- `models/`: modelos de MongoDB.
+- `routes/`: endpoints.
+- `controllers/`: solicitudes y respuestas.
+- `services/`: lógica de negocio.
+- `repositories/`: acceso a datos.
+- `middlewares/`: autenticación y permisos.
+- `utils/`: funciones auxiliares.
+- `app.js`: configuración de Express.
+- `server.js`: inicio del servidor.
 
 ## Seguridad
 
-- Las contraseñas se almacenan mediante hash con bcrypt.
-- Los JWT tienen un tiempo de expiración configurable.
-- La cookie de autenticación usa `httpOnly`.
-- Los permisos se verifican en el backend mediante middlewares.
-- Las rutas de modificación y publicación verifican la propiedad del evento.
-- La consulta administrativa excluye las contraseñas.
-- Las variables sensibles se almacenan en `.env`, que no debe subirse al repositorio.
+- Contraseñas protegidas con bcrypt.
+- Autenticación con JWT y cookies `httpOnly`.
+- Control de acceso mediante roles.
+- Verificación de propiedad de eventos.
+- Variables sensibles almacenadas en `.env`.
+- Contraseñas excluidas de las consultas administrativas.
 
 ## Autor
 
