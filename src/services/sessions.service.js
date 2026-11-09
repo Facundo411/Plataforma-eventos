@@ -1,5 +1,6 @@
 import UsersRepository from "../repositories/users.repository.js";
 import { createHash, compareHash } from "../utils/hash.js";
+import UserDTO from "../dtos/UserDTO.js";
 
 const usersRepository = new UsersRepository();
 
@@ -24,10 +25,7 @@ class SessionsService {
             password: passwordHash
         });
 
-        const userResponse = newUser.toObject();
-        delete userResponse.password;
-
-        return userResponse;
+        return new UserDTO(newUser);
     }
 
 

@@ -26,6 +26,20 @@ export async function createTicket(req, res) {
             payload: ticket
         });
     } catch (error) {
+        if (error.message.includes("ya tiene una inscripción activa")) {
+            return res.status(409).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
+        if (error.message.includes("no existe")) {
+            return res.status(404).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
         return res.status(400).json({
             status: "error",
             message: error.message

@@ -2,19 +2,23 @@ import UsersDAO from "../dao/users.dao.js";
 
 class UsersRepository {
     constructor() {
-        this.usersDAO = new UsersDAO();
+        this.dao = new UsersDAO();
     }
 
     async findByEmail(email) {
-        return await this.usersDAO.findByEmail(email);
+        return await this.dao.findByEmail(email);
     }
 
     async getAll() {
-        return await this.usersDAO.getAll();
+        return await this.dao.getAll();
+    }
+
+    async findById(id) {
+        return await this.dao.findById(id);
     }
 
     async create(userData) {
-        return await this.usersDAO.create(userData);
+        return await this.dao.create(userData);
     }
 }
 

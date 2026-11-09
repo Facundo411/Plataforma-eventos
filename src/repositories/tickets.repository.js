@@ -1,21 +1,24 @@
-import Ticket from "../models/Ticket.js";
+import TicketsDAO from "../dao/tickets.dao.js";
 
 class TicketsRepository {
+    constructor() {
+        this.dao = new TicketsDAO();
+    }
+
     async getById(id) {
-        return await Ticket.findById(id);
+        return await this.dao.findById(id);
     }
 
     async getByUser(userId) {
-        return await Ticket.find({ user: userId })
-            .populate("event", "title date location");
+        return await this.dao.findByUser(userId);
     }
 
     async getByEvent(eventId) {
-        return await Ticket.find({ event: eventId });
+        return await this.dao.findByEvent(eventId);
     }
 
     async findActiveByUserAndEvent(userId, eventId) {
-        return await Ticket.findOne({
+        return await this.dao.findOne({
             user: userId,
             event: eventId,
             status: { $in: ["confirmed", "pending"] }
@@ -23,15 +26,11 @@ class TicketsRepository {
     }
 
     async create(ticketData) {
-        return await Ticket.create(ticketData);
+        return await this.dao.create(ticketData);
     }
 
     async update(id, ticketData) {
-        return await Ticket.findByIdAndUpdate(
-            id,
-            ticketData,
-            { new: true, runValidators: true }
-        );
+        return await this.dao.update(id, ticketData);
     }
 }
 

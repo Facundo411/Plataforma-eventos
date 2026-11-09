@@ -1,13 +1,13 @@
-import SessionsService from "../services/sessions.service.js";
 import { generateToken } from "../utils/jwt.js";
+import UserDTO from "../dtos/UserDTO.js";
 
-const sessionsService = new SessionsService();
+
 
 
 export function register(req, res) {
     return res.status(201).json({
         status: "success",
-        payload: req.user
+        payload: new UserDTO(req.user)
     });
 }
 
@@ -34,13 +34,11 @@ export function login(req, res) {
 }
 
 export async function current(req, res) {
-    res.status(200).json({
+    const user = new UserDTO(req.user);
+
+    return res.status(200).json({
         status: "success",
-        payload: {
-            id: req.user.id,
-            email: req.user.email,
-            role: req.user.role
-        }
+        payload: user
     });
 }
 

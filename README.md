@@ -6,7 +6,9 @@ Plataforma de Eventos es una API REST desarrollada con **Node.js y Express** par
 
 Utiliza MongoDB, Passport.js, JWT, cookies y autorización basada en roles (RBAC).
 
-El proyecto está organizado en rutas, controladores, servicios, repositorios y middlewares.
+El proyecto está organizado siguiendo una arquitectura por capas:
+rutas → controladores → servicios → repositorios → DAOs → modelos,
+con DTOs para controlar los datos expuestos en las respuestas.
 
 ## Tecnologías utilizadas
 
@@ -31,8 +33,8 @@ Crear un archivo `.env`:
 
 ```env
 PORT=8080
-MONGO_URL=tu_mongo_url
-JWT_SECRET=tu_jwt_secret
+MONGO_URL=mi_mongo_url
+JWT_SECRET=mi_jwt_secret
 JWT_EXPIRES_IN=1h
 NODE_ENV=development
 
@@ -193,6 +195,20 @@ El organizador se asigna automáticamente desde `req.user` y solo puede administ
 - `middlewares/`: autenticación y permisos.
 - `utils/`: funciones auxiliares.
 - `app.js` y `server.js`: configuración e inicio del servidor.
+- `dao/`: acceso directo a los modelos de MongoDB.
+- `repositories/`: capa de acceso a datos utilizada por los servicios.
+- `dtos/`: objetos para controlar y filtrar los datos enviados al cliente.
+
+## Arquitectura
+
+El proyecto utiliza una arquitectura por capas:
+
+- **DAO:** única capa que interactúa directamente con los modelos de Mongoose.
+- **Repository:** utiliza los DAOs y proporciona métodos orientados al dominio.
+- **Service:** contiene la lógica de negocio y utiliza únicamente los repositories.
+- **Controller:** recibe las solicitudes HTTP, llama a los services y construye las respuestas.
+- **DTO:** controla qué información se expone al cliente, evitando enviar datos sensibles como contraseñas.
+- **Middleware:** gestiona autenticación, autorización y manejo de errores.
 
 ## Seguridad
 

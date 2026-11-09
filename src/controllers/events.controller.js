@@ -162,9 +162,21 @@ export async function createEvent(req, res) {
             payload: event
         });
     } catch (error) {
-        return res.status(400).json({
+        if (
+            error.message.includes("obligatorios") ||
+            error.message.includes("fecha") ||
+            error.message.includes("capacidad") ||
+            error.message.includes("precio")
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
+        return res.status(500).json({
             status: "error",
-            message: error.message
+            message: "Error interno del servidor"
         });
     }
 }
@@ -180,26 +192,6 @@ export async function updateEvent(req, res) {
             });
         }
 
-        const event = await eventsService.getEventById(id);
-
-
-        if (!event) {
-            return res.status(404).json({
-                status: "error",
-                message: "Evento no encontrado"
-            });
-        }
-
-        const isAdmin = req.user.role === "admin";
-        const isOwner = event.organizer.toString() === req.user.id.toString();
-
-        if (!isAdmin && !isOwner) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tenés permisos para modificar este evento"
-            });
-        }
-
         const {
             title,
             description,
@@ -210,39 +202,49 @@ export async function updateEvent(req, res) {
             price
         } = req.body;
 
-        if (
-            !title ||
-            !description ||
-            !category ||
-            !date ||
-            !location ||
-            capacity === undefined ||
-            price === undefined
-        ) {
-            return res.status(400).json({
-                status: "error",
-                message: "Todos los campos obligatorios deben estar completos"
-            });
-        }
-
-        const updatedEvent = await eventsService.updateEvent(id, {
-            title,
-            description,
-            category,
-            date,
-            location,
-            capacity,
-            price
-        });
+        const updatedEvent = await eventsService.updateEvent(
+            id,
+            {
+                title,
+                description,
+                category,
+                date,
+                location,
+                capacity,
+                price
+            },
+            req.user.id,
+            req.user.role
+        );
 
         return res.status(200).json({
             status: "success",
             payload: updatedEvent
         });
     } catch (error) {
-        return res.status(400).json({
+        if (error.message.includes("no encontrado")) {
+            return res.status(404).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
+        if (
+            error.message.includes("obligatorios") ||
+            error.message.includes("fecha") ||
+            error.message.includes("capacidad") ||
+            error.message.includes("precio") ||
+            error.message.includes("cancelado")
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
+        return res.status(500).json({
             status: "error",
-            message: error.message
+            message: "Error interno del servidor"
         });
     }
 }
@@ -268,27 +270,40 @@ export async function changeEventStatus(req, res) {
             });
         }
 
-        const isAdmin = req.user.role === "admin";
-        const isOwner =
-            event.organizer.toString() === req.user.id.toString();
-
-        if (!isAdmin && !isOwner) {
-            return res.status(403).json({
-                status: "error",
-                message: "No tenés permisos para modificar este evento"
-            });
-        }
-
-        const updatedEvent = await eventsService.changeEventStatus(id, status);
+        const updatedEvent = await eventsService.changeEventStatus(
+            id,
+            status,
+            req.user.id,
+            req.user.role
+        );
 
         return res.status(200).json({
             status: "success",
             payload: updatedEvent
         });
     } catch (error) {
-        return res.status(400).json({
+        if (error.message.includes("no encontrado")) {
+            return res.status(404).json({
+                status: "error",
+                message: error.message
+            });
+        }
+        
+        if (
+            error.message.includes("estado") ||
+            error.message.includes("fecha") ||
+            error.message.includes("cancelado") ||
+            error.message.includes("finalizado")
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
+        return res.status(500).json({
             status: "error",
-            message: error.message
+            message: "Error interno del servidor"
         });
     }
 }

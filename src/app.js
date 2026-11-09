@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import passport from "./config/passport.config.js";
 import usersRouter from "./routes/users.router.js";
 import ticketsRouter from "./routes/tickets.router.js";
+import { errorHandler } from "./middlewares/error.middleware.js";
 
 const app = express();
 
@@ -28,5 +29,7 @@ app.use("/api", ticketsRouter);
 app.use("/api/sessions", sessionsRouter);
 
 app.use("/api/users", usersRouter);
+
+app.use(errorHandler);
 
 export default app;

@@ -1,11 +1,13 @@
 import TicketsRepository from "../repositories/tickets.repository.js";
 import EventsRepository from "../repositories/events.repository.js";
-import User from "../models/User.js";
+import UsersRepository from "../repositories/users.repository.js";
+import TicketDTO from "../dtos/TicketDTO.js";
 import EmailService from "./email.service.js";
 import crypto from "node:crypto";
 
 const ticketsRepository = new TicketsRepository();
 const eventsRepository = new EventsRepository();
+const usersRepository = new UsersRepository();
 const emailService = new EmailService();
 
 class TicketsService {
@@ -59,7 +61,7 @@ class TicketsService {
 
         const ticket = await ticketsRepository.create(ticketData);
 
-        const user = await User.findById(userId);
+        const user = await usersRepository.findById(userId);
 
         if (user) {
             await emailService.sendEmail(
@@ -74,11 +76,13 @@ class TicketsService {
             );
         }
 
-        return ticket;
+        return new TicketDTO(ticket);
     }
 
     async getMyTickets(userId) {
-        return await ticketsRepository.getByUser(userId);
+        const tickets = await ticketsRepository.getByUser(userId);
+
+        return tickets.map(ticket => new TicketDTO(ticket));
     }
 
     async cancelTicket(ticketId, userId, userRole) {
@@ -99,10 +103,12 @@ class TicketsService {
             throw new Error("El ticket ya está cancelado");
         }
 
-        return await ticketsRepository.update(ticketId, {
+        const cancelledTicket = await ticketsRepository.update(ticketId, {
             status: "cancelled",
             cancelledAt: new Date()
         });
+
+        return new TicketDTO(cancelledTicket);
     }
 
     async getTicketsByEvent(eventId, userId, userRole) {
@@ -119,7 +125,9 @@ class TicketsService {
             throw new Error("No tenés permisos para consultar los tickets de este evento");
         }
 
-        return await ticketsRepository.getByEvent(eventId);
+        const tickets = await ticketsRepository.getByEvent(eventId);
+
+        return tickets.map(ticket => new TicketDTO(ticket));
     }
 }
 
