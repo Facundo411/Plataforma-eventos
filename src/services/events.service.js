@@ -54,7 +54,7 @@ class EventsService {
     }
 
     async updateEvent(id, eventData, userId, userRole) {
-        {
+        
             const event = await eventsRepository.getById(id);
 
             if (!event) {
@@ -115,7 +115,7 @@ class EventsService {
             const updatedEvent = await eventsRepository.update(id, eventData);
 
             return new EventDTO(updatedEvent);
-        }
+        
     }
 
     async changeEventStatus(id, status, userId, userRole) {

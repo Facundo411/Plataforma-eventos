@@ -229,6 +229,13 @@ export async function updateEvent(req, res) {
             });
         }
 
+        if (error.message.includes("permisos")) {
+            return res.status(403).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
         if (
             error.message.includes("obligatorios") ||
             error.message.includes("fecha") ||
@@ -261,15 +268,6 @@ export async function changeEventStatus(req, res) {
             });
         }
 
-        const event = await eventsService.getEventById(id);
-
-        if (!event) {
-            return res.status(404).json({
-                status: "error",
-                message: "Evento no encontrado"
-            });
-        }
-
         const updatedEvent = await eventsService.changeEventStatus(
             id,
             status,
@@ -288,7 +286,14 @@ export async function changeEventStatus(req, res) {
                 message: error.message
             });
         }
-        
+
+        if (error.message.includes("permisos")) {
+            return res.status(403).json({
+                status: "error",
+                message: error.message
+            });
+        }
+
         if (
             error.message.includes("estado") ||
             error.message.includes("fecha") ||

@@ -69,6 +69,36 @@ Existen tres roles:
 
 Los usuarios registrados públicamente reciben el rol `user` por defecto.
 
+## Flujo de autenticación e inscripción
+
+1. El usuario se registra mediante `/api/sessions/register`.
+2. Inicia sesión mediante `/api/sessions/login`.
+3. El servidor genera un JWT y lo almacena en la cookie `currentUser`.
+4. El usuario puede consultar su sesión mediante `/api/sessions/current`.
+5. Un organizer crea y publica un evento.
+6. Un usuario autenticado se inscribe mediante `/api/events/:eid/tickets`.
+7. Se verifica que el evento esté publicado y tenga cupos disponibles.
+8. Se crea el ticket y se envía un correo de confirmación.
+9. El usuario puede consultar sus inscripciones mediante `/api/tickets/my-tickets`.
+10. Si cancela la inscripción, el ticket pasa a estado `cancelled` y el cupo vuelve a estar disponible.
+
+## Usuarios de prueba
+
+Los usuarios pueden crearse mediante el endpoint de registro:
+
+POST /api/sessions/register
+
+Ejemplo de usuario:
+
+```json
+{
+    "first_name": "Usuario",
+    "last_name": "Prueba",
+    "email": "usuario@test.com",
+    "password": "Prueba123!"
+}
+```
+
 ## Gestión de eventos
 
 Cada evento contiene:
@@ -149,6 +179,62 @@ Nodemailer envía un correo de confirmación con el nombre del evento, la cantid
 | GET | `/api/tickets/my-tickets` | Consultar mis inscripciones | Autenticado |
 | GET | `/api/events/:eid/tickets` | Consultar tickets del evento | organizer propietario, admin |
 | PATCH | `/api/tickets/:tid/cancel` | Cancelar inscripción | Propietario, admin |
+
+## Ejemplos de uso
+
+### Registro
+
+`POST /api/sessions/register`
+
+```json
+{
+    "first_name": "Usuario",
+    "last_name": "Prueba",
+    "email": "usuario@test.com",
+    "password": "Prueba123!"
+}
+```
+
+### Login
+
+`POST /api/sessions/login`
+
+```json
+{
+    "email": "usuario@test.com",
+    "password": "Prueba123!"
+}
+```
+
+El JWT se almacena en la cookie `currentUser`.
+
+### Crear un evento
+
+`POST /api/events`
+
+```json
+{
+    "title": "Congreso Tech",
+    "description": "Evento de tecnología",
+    "category": "tecnologia",
+    "date": "2027-02-15T20:00:00",
+    "location": "Buenos Aires",
+    "capacity": 50,
+    "price": 1000
+}
+```
+
+### Inscribirse
+
+`POST /api/events/:eid/tickets`
+
+```json
+{
+    "quantity": 1
+}
+```
+
+La inscripción valida el estado del evento, los cupos disponibles y evita duplicados.
 
 ## Filtros y paginación
 
